@@ -13,6 +13,7 @@ interface Question {
   choices: { value: string; fr: string; mg: string }[]
   constraint: any
   relevant: any
+  score_correct: any
 }
 
 interface Section {
@@ -28,6 +29,7 @@ export default function FormPage() {
   const [data, setData] = useState<Record<string, any>>({})
   const [currentSection, setCurrentSection] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [scores, setScores] = useState<any>(null)
 
   useEffect(() => {
     loadForm()
@@ -45,13 +47,17 @@ export default function FormPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await api.post('/save-reponse/', {
+      const res = await api.post('/save-reponse/', {
         patient_id: patientId,
         etude_id: etudeId,
         periode,
         data,
       })
-      navigate(`/etudes/${etudeId}`)
+      setScores(res.data.scores)
+      // Afficher les scores pendant 2 secondes puis naviguer
+      setTimeout(() => {
+        navigate(`/etudes/${etudeId}`)
+      }, 2000)
     } catch {
       alert('Erreur lors de la sauvegarde')
     }
@@ -67,6 +73,18 @@ export default function FormPage() {
     if (relevant.neq) {
       const [name, value] = relevant.neq
       return String(data[name]) !== String(value)
+    }
+    if (relevant.sel) {
+      const [name, value] = relevant.sel
+      const selected = Array.isArray(data[name]) ? data[name] : []
+      return selected.includes(value)
+    }
+    if (relevant.or) {
+      return relevant.or.some((r: any) => isRelevant(r))
+    }
+    if (relevant.gt) {
+      const [name, value] = relevant.gt
+      return Number(data[name]) > value
     }
     return true
   }
@@ -149,6 +167,26 @@ export default function FormPage() {
             ))}
           </div>
         )
+      case 'likert':
+        const likertValue = data[q.name] || ''
+        return (
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => updateData(q.name, String(v))}
+                className={`w-10 h-10 rounded ${
+                  likertValue === String(v)
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 hover:bg-gray-300'
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        )
       case 'note':
         return <p className="text-gray-600 italic">{q.label_fr}</p>
       default:
@@ -157,6 +195,25 @@ export default function FormPage() {
   }
 
   if (sections.length === 0) return <div className="p-6">Chargement du formulaire...</div>
+
+  // Afficher les scores après sauvegarde
+  if (scores) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+          <h2 className="text-xl font-bold text-green-700 mb-4">Réponse sauvegardée !</h2>
+          <div className="space-y-2">
+            {Object.entries(scores).map(([name, score]: [string, any]) => (
+              <div key={name} className="text-lg">
+                <span className="font-medium">{name}:</span>{' '}
+                <span className="text-blue-600 font-bold">{score.score}/{score.total}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const section = sections[currentSection]
 

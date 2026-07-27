@@ -50,6 +50,9 @@ export default function EtudeDetailPage() {
         <div>
           <h1 className="text-2xl font-bold">{etude.nom}</h1>
           <p className="text-gray-500">{etude.description}</p>
+          <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-gray-100">
+            {etude.domaine}
+          </span>
         </div>
         <span className={`px-3 py-1 rounded-full text-sm ${
           etude.statut === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
@@ -58,6 +61,33 @@ export default function EtudeDetailPage() {
         </span>
       </div>
 
+      {/* Actions rapides */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <Link
+          to={`/etudes/${id}/builder`}
+          className="bg-purple-600 text-white rounded-xl p-4 text-center hover:bg-purple-700"
+        >
+          <div className="text-2xl mb-1">📝</div>
+          <div className="font-medium">Form Builder</div>
+        </Link>
+        <Link
+          to={`/export?etude=${id}`}
+          className="bg-blue-600 text-white rounded-xl p-4 text-center hover:bg-blue-700"
+        >
+          <div className="text-2xl mb-1">📊</div>
+          <div className="font-medium">Exporter</div>
+        </Link>
+        <button className="bg-gray-200 rounded-xl p-4 text-center hover:bg-gray-300">
+          <div className="text-2xl mb-1">⚙️</div>
+          <div className="font-medium">Paramètres</div>
+        </button>
+        <button className="bg-gray-200 rounded-xl p-4 text-center hover:bg-gray-300">
+          <div className="text-2xl mb-1">📈</div>
+          <div className="font-medium">Statistiques</div>
+        </button>
+      </div>
+
+      {/* Stats */}
       {stats && (
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow p-4">
@@ -77,6 +107,7 @@ export default function EtudeDetailPage() {
         </div>
       )}
 
+      {/* Ajouter un patient */}
       <div className="bg-white rounded-xl shadow p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Ajouter un patient</h2>
         <div className="flex gap-2">
@@ -96,6 +127,7 @@ export default function EtudeDetailPage() {
         </div>
       </div>
 
+      {/* Liste des patients */}
       <div className="bg-white rounded-xl shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Patients ({patients.length})</h2>
         <table className="w-full">

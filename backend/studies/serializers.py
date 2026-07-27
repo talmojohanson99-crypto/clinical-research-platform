@@ -45,11 +45,19 @@ class SectionSerializer(serializers.ModelSerializer):
 class EtudeSerializer(serializers.ModelSerializer):
     sections = SectionSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source="created_by.username", read_only=True)
+    nb_patients = serializers.SerializerMethodField()
+    nb_reponses = serializers.SerializerMethodField()
 
     class Meta:
         model = Etude
         fields = "__all__"
         read_only_fields = ["id", "created_by", "created_at"]
+
+    def get_nb_patients(self, obj):
+        return obj.patient_etudes.count()
+
+    def get_nb_reponses(self, obj):
+        return obj.reponses.count()
 
 
 class EtudeListSerializer(serializers.ModelSerializer):
@@ -59,7 +67,10 @@ class EtudeListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Etude
-        fields = ["id", "nom", "description", "statut", "created_by_name", "nb_patients", "nb_reponses", "created_at"]
+        fields = [
+            "id", "nom", "description", "domaine", "statut",
+            "created_by_name", "nb_patients", "nb_reponses", "created_at",
+        ]
 
     def get_nb_patients(self, obj):
         return obj.patient_etudes.count()

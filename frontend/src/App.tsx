@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import EtudesPage from './pages/EtudesPage'
 import EtudeDetailPage from './pages/EtudeDetailPage'
+import FormBuilderPage from './pages/FormBuilderPage'
 import FormPage from './pages/FormPage'
 import PatientsPage from './pages/PatientsPage'
 import ExportPage from './pages/ExportPage'
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/etudes" element={<ProtectedRoute><EtudesPage /></ProtectedRoute>} />
       <Route path="/etudes/:id" element={<ProtectedRoute><EtudeDetailPage /></ProtectedRoute>} />
+      <Route path="/etudes/:id/builder" element={<ProtectedRoute><FormBuilderPage /></ProtectedRoute>} />
       <Route path="/etudes/:etudeId/fill/:patientId/:periode" element={<ProtectedRoute><FormPage /></ProtectedRoute>} />
       <Route path="/patients" element={<ProtectedRoute><PatientsPage /></ProtectedRoute>} />
       <Route path="/export" element={<ProtectedRoute><ExportPage /></ProtectedRoute>} />

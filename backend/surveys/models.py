@@ -11,16 +11,34 @@ class Reponse(models.Model):
     etude = models.ForeignKey("studies.Etude", on_delete=models.CASCADE, related_name="reponses")
     periode = models.CharField(max_length=10, verbose_name="Période (T1, T2, T3...)")
 
-    # Données brutes (JSON)
+    # Données brutes (JSON flexible)
     data = models.JSONField(default=dict, verbose_name="Réponses brutes")
 
     # Scores pré-calculés
     scores = models.JSONField(default=dict, blank=True, verbose_name="Scores calculés")
 
-    # Métadonnées
+    # Calculs automatiques
+    auto_calculs = models.JSONField(default=dict, blank=True, verbose_name="Calculs auto")
+
+    # Métadonnées de collecte
     filled_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="reponses"
     )
+    device_id = models.CharField(max_length=100, blank=True)
+    gps_lat = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    gps_lon = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+
+    # Statut
+    STATUT_CHOICES = [
+        ("draft", "Brouillon"),
+        ("submitted", "Soumis"),
+        ("verified", "Vérifié"),
+        ("rejected", "Rejeté"),
+    ]
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default="submitted")
+
+    # Horodatage
+    submitted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -34,6 +52,32 @@ class Reponse(models.Model):
         return f"{self.patient.numero_id} — {self.etude.nom} — {self.periode}"
 
 
+class Media(models.Model):
+    """Fichier média attaché à une réponse."""
+
+    TYPE_CHOICES = [
+        ("photo", "Photo"),
+        ("audio", "Audio"),
+        ("video", "Vidéo"),
+        ("signature", "Signature"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    reponse = models.ForeignKey(Reponse, on_delete=models.CASCADE, related_name="media")
+    question_name = models.CharField(max_length=100)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    fichier = models.FileField(upload_to="media/%Y/%m/%d/")
+    taille = models.IntegerField(default=0, verbose_name="Taille en bytes")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Média"
+        verbose_name_plural = "Médias"
+
+    def __str__(self):
+        return f"{self.question_name} — {self.type}"
+
+
 class AuditLog(models.Model):
     """Journal d'audit pour traçabilité."""
 
@@ -43,6 +87,7 @@ class AuditLog(models.Model):
         ("delete", "Suppression"),
         ("export", "Export"),
         ("login", "Connexion"),
+        ("sync", "Synchronisation"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -52,6 +97,7 @@ class AuditLog(models.Model):
     object_id = models.CharField(max_length=100, blank=True)
     details = models.JSONField(default=dict, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
+    device_id = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

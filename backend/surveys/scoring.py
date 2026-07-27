@@ -1,21 +1,28 @@
 """
-Moteur de scoring dynamique.
-Calcule les scores à partir des règles définies dans l'étude.
+Moteur de scoring dynamique multi-études.
+Calcule les scores à partir des règles définies dans chaque étude.
 """
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 
-def compute_age(dob: date | None) -> int | None:
+def compute_age(dob: date | str | None) -> int | None:
+    """Calcule l'âge à partir de la date de naissance."""
     if not dob:
         return None
+    if isinstance(dob, str):
+        try:
+            dob = datetime.strptime(dob, "%Y-%m-%d").date()
+        except ValueError:
+            return None
     today = date.today()
     age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
     return age if 0 <= age < 130 else None
 
 
-def compute_age_grp(dob: date | None) -> str | None:
+def compute_age_grp(dob: date | str | None) -> str | None:
+    """Tranche d'âge : configurable par étude."""
     age = compute_age(dob)
     if age is None:
         return None
@@ -29,6 +36,7 @@ def compute_age_grp(dob: date | None) -> str | None:
 
 
 def compute_imc(poids: float | None, taille: float | None) -> float | None:
+    """IMC = poids / (taille en mètres)²"""
     if not poids or not taille or taille <= 0:
         return None
     m = taille / 100
@@ -37,6 +45,7 @@ def compute_imc(poids: float | None, taille: float | None) -> float | None:
 
 
 def imc_categorie(imc: float | None) -> str | None:
+    """Catégorie IMC."""
     if imc is None:
         return None
     if imc < 18:
@@ -48,14 +57,37 @@ def imc_categorie(imc: float | None) -> str | None:
     return "4"
 
 
+def compute_auto_calculs(data: dict[str, Any], calculs: list[str]) -> dict[str, Any]:
+    """Calcule les valeurs automatiques demandées."""
+    result = {}
+
+    for calc in calculs:
+        if calc == "age":
+            result["age"] = compute_age(data.get("date_naissance"))
+        elif calc == "age_grp":
+            result["age_grp"] = compute_age_grp(data.get("date_naissance"))
+        elif calc == "imc":
+            result["imc"] = compute_imc(
+                _to_float(data.get("poids_kg")),
+                _to_float(data.get("taille_cm")),
+            )
+        elif calc == "imc_categorie":
+            imc = compute_imc(
+                _to_float(data.get("poids_kg")),
+                _to_float(data.get("taille_cm")),
+            )
+            result["imc_categorie"] = imc_categorie(imc)
+
+    return result
+
+
 def compute_scores(data: dict[str, Any], rules: dict[str, Any]) -> dict[str, Any]:
     """
     Calcule tous les scores configurés dans rules.
     
     Format de rules :
     {
-        "auto": ["age", "age_grp", "imc", "imc_categorie"],
-        "test_scores": [
+        "tests": [
             {
                 "name": "score_test1",
                 "max": 20,
@@ -70,32 +102,7 @@ def compute_scores(data: dict[str, Any], rules: dict[str, Any]) -> dict[str, Any
     """
     scores = {}
 
-    # Calculs automatiques
-    auto = rules.get("auto", [])
-    if "age" in auto:
-        dob = data.get("date_naissance")
-        if dob:
-            from datetime import datetime
-            if isinstance(dob, str):
-                dob = datetime.strptime(dob, "%Y-%m-%d").date()
-            scores["age"] = compute_age(dob)
-    if "age_grp" in auto:
-        dob = data.get("date_naissance")
-        if dob:
-            from datetime import datetime
-            if isinstance(dob, str):
-                dob = datetime.strptime(dob, "%Y-%m-%d").date()
-            scores["age_grp"] = compute_age_grp(dob)
-    if "imc" in auto:
-        scores["imc"] = compute_imc(
-            _to_float(data.get("poids_kg")),
-            _to_float(data.get("taille_cm")),
-        )
-    if "imc_categorie" in auto:
-        scores["imc_categorie"] = imc_categorie(scores.get("imc"))
-
-    # Scores de tests (Michigan, Test 1, etc.)
-    for test in rules.get("test_scores", []):
+    for test in rules.get("tests", []):
         name = test["name"]
         max_score = test.get("max", 20)
         questions = test.get("questions", {})
@@ -125,6 +132,27 @@ def compute_scores(data: dict[str, Any], rules: dict[str, Any]) -> dict[str, Any
         }
 
     return scores
+
+
+def process_reponse(data: dict[str, Any], etude_config: dict[str, Any]) -> dict[str, Any]:
+    """
+    Traite une réponse complète : calcule les scores et les calculs automatiques.
+    
+    etude_config = {
+        "auto_calculs": ["age", "imc", ...],
+        "scoring_rules": { "tests": [...] }
+    }
+    """
+    # Calculs automatiques
+    auto_calculs = compute_auto_calculs(data, etude_config.get("auto_calculs", []))
+    
+    # Scores
+    scores = compute_scores(data, etude_config.get("scoring_rules", {}))
+    
+    return {
+        "auto_calculs": auto_calculs,
+        "scores": scores,
+    }
 
 
 def _to_float(v) -> float | None:

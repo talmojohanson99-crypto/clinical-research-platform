@@ -23,7 +23,7 @@ class IsAdminOrResearcher(permissions.BasePermission):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_class = permissions.IsAdminUser
+    permission_classes = [permissions.IsAdminUser]
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -80,15 +80,33 @@ class EtudeViewSet(viewsets.ModelViewSet):
             "total_patients": etude.patient_etudes.count(),
             "total_reponses": reponses.count(),
             "par_periode": {},
+            "par_statut": {},
         }
 
         for r in reponses:
+            # Par période
             periode = r.periode
             if periode not in stats["par_periode"]:
                 stats["par_periode"][periode] = 0
             stats["par_periode"][periode] += 1
 
+            # Par statut
+            statut = r.statut
+            if statut not in stats["par_statut"]:
+                stats["par_statut"][statut] = 0
+            stats["par_statut"][statut] += 1
+
         return Response(stats)
+
+    @action(detail=True, methods=["get"])
+    def form_builder(self, request, pk=None):
+        """Retourne la structure complète pour le form builder."""
+        etude = self.get_object()
+        sections = etude.sections.prefetch_related("questions").all()
+        return Response({
+            "etude": EtudeSerializer(etude).data,
+            "sections": SectionSerializer(sections, many=True).data,
+        })
 
 
 class SectionViewSet(viewsets.ModelViewSet):

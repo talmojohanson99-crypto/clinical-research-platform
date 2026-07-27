@@ -6,6 +6,7 @@ interface Etude {
   id: string
   nom: string
   description: string
+  domaine: string
   statut: string
   nb_patients: number
   nb_reponses: number
@@ -19,10 +20,22 @@ const STATUT_COLORS: Record<string, string> = {
   completed: 'bg-blue-100 text-blue-700',
 }
 
+const DOMAINE_COLORS: Record<string, string> = {
+  diabète: 'bg-orange-100 text-orange-700',
+  paludisme: 'bg-red-100 text-red-700',
+  vih: 'bg-purple-100 text-purple-700',
+  maternité: 'bg-pink-100 text-pink-700',
+  nutrition: 'bg-green-100 text-green-700',
+  cardiologie: 'bg-red-100 text-red-700',
+  psychiatrie: 'bg-indigo-100 text-indigo-700',
+  epidemiologie: 'bg-blue-100 text-blue-700',
+  autre: 'bg-gray-100 text-gray-700',
+}
+
 export default function EtudesPage() {
   const [etudes, setEtudes] = useState<Etude[]>([])
   const [showCreate, setShowCreate] = useState(false)
-  const [form, setForm] = useState({ nom: '', description: '' })
+  const [form, setForm] = useState({ nom: '', description: '', domaine: 'autre' })
 
   useEffect(() => {
     loadEtudes()
@@ -35,8 +48,15 @@ export default function EtudesPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    await api.post('/etudes/', { ...form, statut: 'draft', periodes: [], scoring_rules: { auto: [] } })
-    setForm({ nom: '', description: '' })
+    await api.post('/etudes/', {
+      ...form,
+      statut: 'draft',
+      periodes: [],
+      scoring_rules: {},
+      auto_calculs: [],
+      choice_lists: {},
+    })
+    setForm({ nom: '', description: '', domaine: 'autre' })
     setShowCreate(false)
     loadEtudes()
   }
@@ -65,6 +85,21 @@ export default function EtudesPage() {
               className="w-full border rounded-lg px-3 py-2"
               required
             />
+            <select
+              value={form.domaine}
+              onChange={(e) => setForm({ ...form, domaine: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+            >
+              <option value="diabète">Diabète</option>
+              <option value="paludisme">Paludisme</option>
+              <option value="vih">VIH/SIDA</option>
+              <option value="maternité">Maternité</option>
+              <option value="nutrition">Nutrition</option>
+              <option value="cardiologie">Cardiologie</option>
+              <option value="psychiatrie">Psychiatrie</option>
+              <option value="epidemiologie">Épidémiologie</option>
+              <option value="autre">Autre</option>
+            </select>
             <textarea
               placeholder="Description"
               value={form.description}
@@ -95,6 +130,11 @@ export default function EtudesPage() {
               <h3 className="font-semibold text-lg">{e.nom}</h3>
               <span className={`text-xs px-2 py-1 rounded-full ${STATUT_COLORS[e.statut]}`}>
                 {e.statut}
+              </span>
+            </div>
+            <div className="mb-2">
+              <span className={`text-xs px-2 py-1 rounded-full ${DOMAINE_COLORS[e.domaine]}`}>
+                {e.domaine}
               </span>
             </div>
             <p className="text-gray-500 text-sm mb-4 line-clamp-2">{e.description}</p>
